@@ -14,7 +14,7 @@ namespace RAXY.PackageInstaller.Editor
         {
             RaxyWithManualDependencies("com.raxy.animation", "RAXY Animation", "https://github.com/RobyRAX/RAXY-Animation.git", new[] { "com.cysharp.unitask", "com.raxy.core", "com.raxy.utility", "com.unity.addressables" }, new[] { "com.kybernetik.animancer" }),
             Raxy("com.raxy.core", "RAXY Core", "https://github.com/RobyRAX/RAXY-Core.git", "com.cysharp.unitask", "com.raxy.utility", "com.unity.addressables"),
-            Raxy("com.raxy.dialogue", "RAXY Dialogue System", "https://github.com/RobyRAX/RAXY-Dialogue.git", "com.raxy.event", "com.raxy.ui", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask", "com.unity.addressables", "com.unity.timeline", "com.unity.ugui"),
+            RaxyWithManualDependencies("com.raxy.dialogue", "RAXY Dialogue System", "https://github.com/RobyRAX/RAXY-Dialogue.git", new[] { "com.raxy.event", "com.raxy.ui", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask", "com.unity.addressables", "com.unity.timeline", "com.unity.ugui" }, new[] { "com.demigiant.dotween" }),
             Raxy("com.raxy.event", "RAXY Event System", "https://github.com/RobyRAX/RAXY-Event.git"),
             Raxy("com.raxy.inputsystem", "RAXY Input System", "https://github.com/RobyRAX/RAXY-InputSystem.git", "com.raxy.event", "com.raxy.utility", "com.unity.inputsystem"),
             Raxy("com.raxy.interaction", "RAXY Interaction System", "https://github.com/RobyRAX/RAXY-Interaction.git"),
@@ -42,7 +42,8 @@ namespace RAXY.PackageInstaller.Editor
         private static readonly Dictionary<string, PackageDefinition> PackageById = Packages.ToDictionary(package => package.Id);
         private static readonly Dictionary<string, string> ManualDependencyDisplayNames = new()
         {
-            { "com.kybernetik.animancer", "Animancer" }
+            { "com.kybernetik.animancer", "Animancer" },
+            { "com.demigiant.dotween", "DOTween" }
         };
 
         private readonly Queue<PackageDefinition> _installQueue = new();
@@ -54,6 +55,7 @@ namespace RAXY.PackageInstaller.Editor
         private PackageDefinition _currentPackage;
         private Vector2 _scroll;
         private string _lastStatus = "Ready.";
+        private bool _isUpdateMode;
 
         private bool IsBusy => _listRequest != null || _addRequest != null || _installQueue.Count > 0;
 
@@ -94,6 +96,9 @@ namespace RAXY.PackageInstaller.Editor
 
                     if (GUILayout.Button("Install All", EditorStyles.toolbarButton, GUILayout.Width(82f)))
                         StartInstall(Packages.Where(package => package.IsVisible).Select(package => package.Id));
+
+                    if (GUILayout.Button("Update All", EditorStyles.toolbarButton, GUILayout.Width(82f)))
+                        StartUpdateAll();
                 }
 
                 GUILayout.FlexibleSpace();
@@ -157,10 +162,10 @@ namespace RAXY.PackageInstaller.Editor
         private string GetPackageStatus(PackageDefinition package, bool isInstalled)
         {
             if (_currentPackage != null && _currentPackage.Id == package.Id)
-                return "Installing";
+                return _isUpdateMode ? "Updating" : "Installing";
 
             if (_installQueue.Any(queuedPackage => queuedPackage.Id == package.Id))
-                return "Queued";
+                return _isUpdateMode ? "Update Queued" : "Queued";
 
             return isInstalled ? "Installed" : "Not Installed";
         }
@@ -194,6 +199,20 @@ namespace RAXY.PackageInstaller.Editor
         private bool IsInstalled(string packageId)
         {
             return _installedPackageIds.Contains(packageId);
+        }
+
+        private static bool IsManualDependencyInstalled(string manualDependencyId)
+        {
+            return manualDependencyId switch
+            {
+                "com.demigiant.dotween" => IsAssemblyLoaded("DOTween.Modules"),
+                _ => false
+            };
+        }
+
+        private static bool IsAssemblyLoaded(string assemblyName)
+        {
+            return AppDomain.CurrentDomain.GetAssemblies().Any(assembly => assembly.GetName().Name == assemblyName);
         }
 
         private void RefreshInstalledPackages()
@@ -234,8 +253,38 @@ namespace RAXY.PackageInstaller.Editor
                 _packageStatuses[package.Id] = "Queued.";
             }
 
+            _isUpdateMode = false;
             _lastStatus = $"Queued {installPlan.Count} package(s).";
-            StartNextInstall();
+            StartNextPackageOperation();
+        }
+
+        private void StartUpdateAll()
+        {
+            if (IsBusy)
+                return;
+
+            var updatePlan = Packages
+                .Where(package => package.IsVisible && IsInstalled(package.Id))
+                .ToList();
+
+            if (updatePlan.Count == 0)
+            {
+                _lastStatus = "No installed RAXY packages to update.";
+                Repaint();
+                return;
+            }
+
+            _installQueue.Clear();
+            _isUpdateMode = true;
+
+            foreach (var package in updatePlan)
+            {
+                _installQueue.Enqueue(package);
+                _packageStatuses[package.Id] = "Queued for update.";
+            }
+
+            _lastStatus = $"Queued {updatePlan.Count} package(s) for update.";
+            StartNextPackageOperation();
         }
 
         private bool TryBuildInstallPlan(IEnumerable<string> rootPackageIds, out List<PackageDefinition> installPlan, out string error)
@@ -293,7 +342,7 @@ namespace RAXY.PackageInstaller.Editor
 
             foreach (string manualDependencyId in package.ManualDependencyIds)
             {
-                if (IsInstalled(manualDependencyId))
+                if (IsInstalled(manualDependencyId) || IsManualDependencyInstalled(manualDependencyId))
                     continue;
 
                 error = $"{package.DisplayName} needs manual dependency {GetManualDependencyDisplayName(manualDependencyId)} (`{manualDependencyId}`) installed first.";
@@ -309,7 +358,7 @@ namespace RAXY.PackageInstaller.Editor
             return true;
         }
 
-        private void StartNextInstall()
+        private void StartNextPackageOperation()
         {
             _currentPackage = null;
 
@@ -317,24 +366,33 @@ namespace RAXY.PackageInstaller.Editor
             {
                 var nextPackage = _installQueue.Dequeue();
 
-                if (IsInstalled(nextPackage.Id))
+                if (_isUpdateMode)
+                {
+                    if (!IsInstalled(nextPackage.Id))
+                    {
+                        _packageStatuses[nextPackage.Id] = "Not installed. Skipped.";
+                        continue;
+                    }
+                }
+                else if (IsInstalled(nextPackage.Id))
                 {
                     _packageStatuses[nextPackage.Id] = "Already installed. Skipped.";
                     continue;
                 }
 
                 _currentPackage = nextPackage;
-                _packageStatuses[nextPackage.Id] = "Installing...";
-                _lastStatus = $"Installing {nextPackage.DisplayName}...";
+                _packageStatuses[nextPackage.Id] = _isUpdateMode ? "Updating..." : "Installing...";
+                _lastStatus = $"{(_isUpdateMode ? "Updating" : "Installing")} {nextPackage.DisplayName}...";
                 _addRequest = Client.Add(nextPackage.InstallSource);
 
-                Debug.Log($"[RAXY Package Installer] Installing {nextPackage.DisplayName} from {nextPackage.InstallSource}");
+                Debug.Log($"[RAXY Package Installer] {(_isUpdateMode ? "Updating" : "Installing")} {nextPackage.DisplayName} from {nextPackage.InstallSource}");
                 Repaint();
                 return;
             }
 
-            _lastStatus = "Install complete.";
-            Debug.Log("[RAXY Package Installer] Install complete.");
+            _lastStatus = _isUpdateMode ? "Update complete." : "Install complete.";
+            Debug.Log($"[RAXY Package Installer] {(_isUpdateMode ? "Update" : "Install")} complete.");
+            _isUpdateMode = false;
             RefreshInstalledPackages();
         }
 
@@ -380,33 +438,39 @@ namespace RAXY.PackageInstaller.Editor
             var completedPackage = _currentPackage;
             bool installSucceeded = _addRequest.Status == StatusCode.Success;
 
+            bool wasUpdateMode = _isUpdateMode;
+
             if (installSucceeded)
             {
                 if (completedPackage != null)
                 {
                     _installedPackageIds.Add(completedPackage.Id);
-                    _packageStatuses[completedPackage.Id] = "Installed.";
-                    _lastStatus = $"Installed {completedPackage.DisplayName}.";
-                    Debug.Log($"[RAXY Package Installer] Installed {completedPackage.DisplayName}.");
+                    _packageStatuses[completedPackage.Id] = wasUpdateMode ? "Updated." : "Installed.";
+                    _lastStatus = wasUpdateMode
+                        ? $"Updated {completedPackage.DisplayName}."
+                        : $"Installed {completedPackage.DisplayName}.";
+                    Debug.Log($"[RAXY Package Installer] {(wasUpdateMode ? "Updated" : "Installed")} {completedPackage.DisplayName}.");
                 }
             }
             else
             {
                 string message = _addRequest.Error != null ? _addRequest.Error.message : "Unknown Package Manager error.";
+                string operationName = wasUpdateMode ? "update" : "install";
 
                 if (completedPackage != null)
                     _packageStatuses[completedPackage.Id] = $"Failed: {message}";
 
                 _installQueue.Clear();
-                _lastStatus = $"Install failed: {message}";
-                Debug.LogError($"[RAXY Package Installer] Failed to install {completedPackage?.DisplayName ?? "package"}: {message}");
+                _isUpdateMode = false;
+                _lastStatus = wasUpdateMode ? $"Update failed: {message}" : $"Install failed: {message}";
+                Debug.LogError($"[RAXY Package Installer] Failed to {operationName} {completedPackage?.DisplayName ?? "package"}: {message}");
             }
 
             _addRequest = null;
             _currentPackage = null;
 
             if (installSucceeded)
-                StartNextInstall();
+                StartNextPackageOperation();
 
             Repaint();
         }

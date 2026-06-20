@@ -12,33 +12,39 @@ namespace RAXY.PackageInstaller.Editor
     {
         private static readonly PackageDefinition[] Packages =
         {
-            Raxy("com.raxy.animation", "RAXY Animation", "https://github.com/RobyRAX/RAXY-Animation.git", "com.raxy.utility"),
-            Raxy("com.raxy.core", "RAXY Core", "https://github.com/RobyRAX/RAXY-Core.git"),
+            RaxyWithManualDependencies("com.raxy.animation", "RAXY Animation", "https://github.com/RobyRAX/RAXY-Animation.git", new[] { "com.raxy.utility", "com.raxy.core", "com.cysharp.unitask", "com.unity.addressables" }, new[] { "com.kybernetik.animancer" }),
+            Raxy("com.raxy.core", "RAXY Core", "https://github.com/RobyRAX/RAXY-Core.git", "com.raxy.utility", "com.cysharp.unitask", "com.unity.addressables"),
             Raxy("com.raxy.dialogue", "RAXY Dialogue System", "https://github.com/RobyRAX/RAXY-Dialogue.git", "com.raxy.event", "com.raxy.ui", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask", "com.unity.addressables", "com.unity.timeline", "com.unity.ugui"),
             Raxy("com.raxy.event", "RAXY Event System", "https://github.com/RobyRAX/RAXY-Event.git"),
-            Raxy("com.raxy.inputsystem", "RAXY Input System", "https://github.com/RobyRAX/RAXY-InputSystem.git"),
+            Raxy("com.raxy.inputsystem", "RAXY Input System", "https://github.com/RobyRAX/RAXY-InputSystem.git", "com.raxy.event", "com.raxy.utility", "com.unity.inputsystem"),
             Raxy("com.raxy.interaction", "RAXY Interaction System", "https://github.com/RobyRAX/RAXY-Interaction.git"),
             Raxy("com.raxy.inventory", "RAXY Inventory System", "https://github.com/RobyRAX/RAXY-Inventory.git", "com.raxy.core", "com.raxy.utility.localization", "com.cysharp.unitask"),
-            Raxy("com.raxy.loot", "RAXY Loot System", "https://github.com/RobyRAX/RAXY-Loot.git", "com.raxy.inventory", "com.raxy.utility"),
+            Raxy("com.raxy.loot", "RAXY Loot System", "https://github.com/RobyRAX/RAXY-Loot.git", "com.raxy.inventory", "com.raxy.utility", "com.raxy.core"),
             Raxy("com.raxy.movement", "RAXY Movement", "https://github.com/RobyRAX/RAXY-Movement.git", "com.raxy.utility", "com.cysharp.unitask"),
             Raxy("com.raxy.notification", "RAXY Notification System", "https://github.com/RobyRAX/RAXY-Notification.git", "com.raxy.core", "com.raxy.utility", "com.unity.ugui"),
-            Raxy("com.raxy.pooling", "RAXY Pooling", "https://github.com/RobyRAX/RAXY-Pooling.git", "com.raxy.utility", "com.unity.addressables", "com.unity.addressables.android"),
+            Raxy("com.raxy.pooling", "RAXY Pooling", "https://github.com/RobyRAX/RAXY-Pooling.git", "com.raxy.utility", "com.raxy.core", "com.unity.addressables", "com.unity.addressables.android"),
             Raxy("com.raxy.quest", "RAXY Quest System", "https://github.com/RobyRAX/RAXY-Quest.git", "com.raxy.inventory", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask"),
-            Raxy("com.raxy.statemachine", "RAXY State Machine", "https://github.com/RobyRAX/RAXY-StateMachine.git"),
+            Raxy("com.raxy.statemachine", "RAXY State Machine", "https://github.com/RobyRAX/RAXY-StateMachine.git", "com.cysharp.unitask"),
             Raxy("com.raxy.ui", "RAXY UI", "https://github.com/RobyRAX/RAXY-UI.git", "com.unity.ugui"),
             Raxy("com.raxy.utility", "RAXY Utility", "https://github.com/RobyRAX/RAXY-Utility.git", "com.unity.nuget.newtonsoft-json"),
-            Raxy("com.raxy.utility.localization", "RAXY Localization", "https://github.com/RobyRAX/RAXY-Localization.git"),
+            Raxy("com.raxy.utility.localization", "RAXY Localization", "https://github.com/RobyRAX/RAXY-Localization.git", "com.unity.localization", "com.cysharp.unitask", "com.unity.addressables"),
             Raxy("com.raxy.vfx", "RAXY VFX Manager", "https://github.com/RobyRAX/RAXY-Vfx.git", "com.raxy.core", "com.raxy.pooling", "com.raxy.utility", "com.unity.addressables"),
 
             External("com.cysharp.unitask", "UniTask", "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"),
             External("com.unity.addressables", "Addressables", "com.unity.addressables@3.1.0"),
             External("com.unity.addressables.android", "Addressables Android", "com.unity.addressables.android@1.1.0"),
+            External("com.unity.inputsystem", "Input System", "com.unity.inputsystem@1.19.0"),
+            External("com.unity.localization", "Localization", "com.unity.localization@1.5.12"),
             External("com.unity.nuget.newtonsoft-json", "Newtonsoft Json", "com.unity.nuget.newtonsoft-json@3.2.2"),
             External("com.unity.timeline", "Timeline", "com.unity.timeline@1.8.12"),
             External("com.unity.ugui", "Unity UI", "com.unity.ugui@2.0.0")
         };
 
         private static readonly Dictionary<string, PackageDefinition> PackageById = Packages.ToDictionary(package => package.Id);
+        private static readonly Dictionary<string, string> ManualDependencyDisplayNames = new()
+        {
+            { "com.kybernetik.animancer", "Animancer" }
+        };
 
         private readonly Queue<PackageDefinition> _installQueue = new();
         private readonly HashSet<string> _installedPackageIds = new();
@@ -163,14 +169,27 @@ namespace RAXY.PackageInstaller.Editor
         private string GetDependencySummary(PackageDefinition package)
         {
             if (package.DependencyIds.Length == 0)
-                return "None";
+                return package.ManualDependencyIds.Length == 0 ? "None" : string.Join(", ", package.ManualDependencyIds.Select(GetManualDependencySummary));
 
-            return string.Join(", ", package.DependencyIds.Select(GetPackageDisplayName));
+            var dependencyNames = package.DependencyIds.Select(GetPackageDisplayName)
+                .Concat(package.ManualDependencyIds.Select(GetManualDependencySummary));
+
+            return string.Join(", ", dependencyNames);
         }
 
         private static string GetPackageDisplayName(string packageId)
         {
             return PackageById.TryGetValue(packageId, out var package) ? package.DisplayName : packageId;
+        }
+
+        private static string GetManualDependencySummary(string packageId)
+        {
+            return $"{GetManualDependencyDisplayName(packageId)} (manual)";
+        }
+
+        private static string GetManualDependencyDisplayName(string packageId)
+        {
+            return ManualDependencyDisplayNames.TryGetValue(packageId, out string displayName) ? displayName : packageId;
         }
 
         private bool IsInstalled(string packageId)
@@ -271,6 +290,15 @@ namespace RAXY.PackageInstaller.Editor
             {
                 if (!ResolvePackage(dependencyId, visited, visiting, installPlan, ref error))
                     return false;
+            }
+
+            foreach (string manualDependencyId in package.ManualDependencyIds)
+            {
+                if (IsInstalled(manualDependencyId))
+                    continue;
+
+                error = $"{package.DisplayName} needs manual dependency {GetManualDependencyDisplayName(manualDependencyId)} (`{manualDependencyId}`) installed first.";
+                return false;
             }
 
             visiting.Remove(packageId);
@@ -386,23 +414,29 @@ namespace RAXY.PackageInstaller.Editor
 
         private static PackageDefinition Raxy(string id, string displayName, string gitUrl, params string[] dependencyIds)
         {
-            return new PackageDefinition(id, displayName, gitUrl, true, dependencyIds);
+            return new PackageDefinition(id, displayName, gitUrl, true, dependencyIds, Array.Empty<string>());
+        }
+
+        private static PackageDefinition RaxyWithManualDependencies(string id, string displayName, string gitUrl, string[] dependencyIds, string[] manualDependencyIds)
+        {
+            return new PackageDefinition(id, displayName, gitUrl, true, dependencyIds, manualDependencyIds);
         }
 
         private static PackageDefinition External(string id, string displayName, string installSource, params string[] dependencyIds)
         {
-            return new PackageDefinition(id, displayName, installSource, false, dependencyIds);
+            return new PackageDefinition(id, displayName, installSource, false, dependencyIds, Array.Empty<string>());
         }
 
         private sealed class PackageDefinition
         {
-            public PackageDefinition(string id, string displayName, string installSource, bool isVisible, string[] dependencyIds)
+            public PackageDefinition(string id, string displayName, string installSource, bool isVisible, string[] dependencyIds, string[] manualDependencyIds)
             {
                 Id = id;
                 DisplayName = displayName;
                 InstallSource = installSource;
                 IsVisible = isVisible;
                 DependencyIds = dependencyIds ?? Array.Empty<string>();
+                ManualDependencyIds = manualDependencyIds ?? Array.Empty<string>();
             }
 
             public string Id { get; }
@@ -410,6 +444,7 @@ namespace RAXY.PackageInstaller.Editor
             public string InstallSource { get; }
             public bool IsVisible { get; }
             public string[] DependencyIds { get; }
+            public string[] ManualDependencyIds { get; }
         }
     }
 }

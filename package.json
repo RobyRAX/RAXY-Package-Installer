@@ -1,0 +1,11 @@
+{
+  "name": "com.raxy.package-installer",
+  "version": "1.0.0",
+  "displayName": "RAXY Package Installer",
+  "description": "Editor utility for installing RAXY framework packages and their dependencies.",
+  "unity": "6000.0",
+  "author": {
+    "name": "RobyRAX",
+    "url": "https://github.com/RobyRAX"
+  }
+}

@@ -24,6 +24,7 @@ namespace RAXY.PackageInstaller.Editor
             Raxy("com.raxy.notification", "RAXY Notification System", "https://github.com/RobyRAX/RAXY-Notification.git", "com.raxy.core", "com.raxy.utility", "com.unity.ugui"),
             Raxy("com.raxy.pooling", "RAXY Pooling", "https://github.com/RobyRAX/RAXY-Pooling.git", "com.raxy.core", "com.raxy.utility", "com.unity.addressables"),
             Raxy("com.raxy.quest", "RAXY Quest System", "https://github.com/RobyRAX/RAXY-Quest.git", "com.raxy.inventory", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask"),
+            Raxy("com.raxy.quest2", "RAXY Quest 2", "https://github.com/RobyRAX/RAXY-Quest-V2.git", "com.raxy.event", "com.raxy.utility.localization", "com.cysharp.unitask"),
             Raxy("com.raxy.statemachine", "RAXY State Machine", "https://github.com/RobyRAX/RAXY-StateMachine.git", "com.cysharp.unitask"),
             Raxy("com.raxy.ui", "RAXY UI", "https://github.com/RobyRAX/RAXY-UI.git", "com.unity.ugui"),
             Raxy("com.raxy.utility", "RAXY Utility", "https://github.com/RobyRAX/RAXY-Utility.git", "com.unity.nuget.newtonsoft-json"),

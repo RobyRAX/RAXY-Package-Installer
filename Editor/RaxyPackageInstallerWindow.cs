@@ -21,6 +21,7 @@ namespace RAXY.PackageInstaller.Editor
             Raxy("com.raxy.inventory", "RAXY Inventory System", "https://github.com/RobyRAX/RAXY-Inventory.git", "com.raxy.core", "com.raxy.utility.localization", "com.cysharp.unitask"),
             Raxy("com.raxy.loot", "RAXY Loot System", "https://github.com/RobyRAX/RAXY-Loot.git", "com.raxy.core", "com.raxy.inventory", "com.raxy.utility"),
             Raxy("com.raxy.movement", "RAXY Movement", "https://github.com/RobyRAX/RAXY-Movement.git", "com.raxy.utility", "com.cysharp.unitask"),
+            RaxyWithManualDependencies("com.raxy.narrative", "RAXY Narrative", "https://github.com/RobyRAX/RAXY-Narrative.git", new[] { "com.raxy.event", "com.raxy.ui", "com.raxy.utility", "com.raxy.utility.localization", "com.raxy.core", "com.cysharp.unitask", "com.unity.addressables", "com.unity.timeline", "com.unity.ugui", "com.unity.cinemachine" }, new[] { "com.demigiant.dotween" }),
             Raxy("com.raxy.notification", "RAXY Notification System", "https://github.com/RobyRAX/RAXY-Notification.git", "com.raxy.core", "com.raxy.utility", "com.unity.ugui"),
             Raxy("com.raxy.pooling", "RAXY Pooling", "https://github.com/RobyRAX/RAXY-Pooling.git", "com.raxy.core", "com.raxy.utility", "com.unity.addressables"),
             Raxy("com.raxy.quest", "RAXY Quest System", "https://github.com/RobyRAX/RAXY-Quest.git", "com.raxy.inventory", "com.raxy.utility", "com.raxy.utility.localization", "com.cysharp.unitask"),
@@ -33,6 +34,7 @@ namespace RAXY.PackageInstaller.Editor
 
             External("com.cysharp.unitask", "UniTask", "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"),
             External("com.unity.addressables", "Addressables", "com.unity.addressables@3.1.0"),
+            External("com.unity.cinemachine", "Cinemachine", "com.unity.cinemachine@3.1.7"),
             External("com.unity.inputsystem", "Input System", "com.unity.inputsystem@1.19.0"),
             External("com.unity.localization", "Localization", "com.unity.localization@1.5.12"),
             External("com.unity.nuget.newtonsoft-json", "Newtonsoft Json", "com.unity.nuget.newtonsoft-json@3.2.2"),
